@@ -13,6 +13,7 @@ import {
 //import { Layer } from '@deck.gl/core'
 
 import {GeoJsonLayer, LineLayer, ArcLayer, ScatterplotLayer} from '@deck.gl/layers'
+import { TripsLayer } from '@deck.gl/geo-layers'
 
 import BarLayer from './BarLayer'
 import MeshLayer from './MeshLayer'
@@ -22,7 +23,7 @@ import store from '../store'
 import { BarData } from '../constants/bargraph'
 import { MeshItem } from '../constants/meshdata'
 import { Line } from '../constants/line'
-import { Arc, Scatter } from '../constants/geoObjects'
+import { Arc, Trips, Scatter } from '../constants/geoObjects'
 
 import InfomationBalloonLayer from './InfomationBalloonLayer'
 import { BalloonInfo, BalloonItem } from '../constants/informationBalloon'
@@ -30,7 +31,7 @@ import { BalloonInfo, BalloonItem } from '../constants/informationBalloon'
 import { AgentData } from '../constants/agent'
 import { isMapboxToken, isBarGraphMsg, isAgentMsg, isLineMsg, isGeoJsonMsg,
 		isPitchMsg, isBearingMsg, isClearMovesMsg, isViewStateMsg, isArcMsg,
-		isClearArcMsg, isScatterMsg, isClearScatterMsg, isLabelInfoMsg, isHarmoVISConfMsg
+		isClearArcMsg, isTripsMsg, isClearTripsMsg, isScatterMsg, isClearScatterMsg, isLabelInfoMsg, isHarmoVISConfMsg
 	} from '../constants/workerMessageTypes'
 import  TopTextLayer  from '../components/TopTextLayer'
 
@@ -84,6 +85,10 @@ class App extends Container<any,any> {
 				self.addArc(msg.payload)
 			} else if (isClearArcMsg(msg)){
 				self.clearArc()
+			} else if (isTripsMsg(msg)){
+				self.addTrips(msg.payload)
+			} else if (isClearTripsMsg(msg)){
+				self.clearTrips()
 			} else if (isScatterMsg(msg)){
 				self.addScatter(msg.payload)								
 			} else if (isClearScatterMsg(msg)){
@@ -417,6 +422,20 @@ class App extends Container<any,any> {
 		store.dispatch(actions.clearArcData())
 	}
 
+	addTrips (data : Trips[]){
+		console.log('getTrips!:' + data.length)
+		console.log(this.props)
+		console.log(this.state)
+
+		store.dispatch(actions.addTripsData(data))
+		
+	}
+
+	clearTrips (){
+		console.log('clearTrips')
+		store.dispatch(actions.clearTripsData())
+	}
+
 	addScatter(data : Scatter[]){
 		console.log('getScatter!:' + data.length)
 		store.dispatch(actions.addScatterData(data))
@@ -670,8 +689,8 @@ class App extends Container<any,any> {
 
 	render () {
 		const props = this.props
-		const { actions, clickedObject, inputFileName, viewport, deoptsData, loading, lines, arcs, scatters, geojson,
-			arcVisible, scatterVisible, scatterFill, scatterMode, 
+		const { actions, clickedObject, inputFileName, viewport, deoptsData, loading, lines, arcs, trips, scatters, geojson,
+			arcVisible, tripsVisible, scatterVisible, scatterFill, scatterMode, 
 			routePaths, lightSettings, movesbase, movedData, mapStyle ,extruded, gridSize,gridHeight, enabledHeatmap, selectedType,
 			widthRatio, heightRatio, radiusRatio, showTitle, infoBalloonList,  settime, titlePosOffset, titleSize,
 			labelText, labelStyle,
@@ -800,6 +819,21 @@ class App extends Container<any,any> {
 								getWidth: 2.0,
 								widthMinPixels: 1,
 							})
+			)
+		}
+
+		if (trips.length > 0) {
+			layers.push(
+				new TripsLayer({
+					id: 'trips-layer',
+					visible: tripsVisible,
+					data: trips,
+					getPath: (d: any) => d.path,
+					getTimestamps: (d: any) => d.ts,
+					getColor: trips.color,
+					currentTime: trips.ts[0],
+					trailLength: trips.ts[-1]
+				})
 			)
 		}
 

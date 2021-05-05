@@ -1,7 +1,7 @@
 import { AgentData } from "./agent";
 import { BarData } from "./bargraph";
 import { Line } from "./line";
-import { Arc, Scatter , LabelInfo} from "./geoObjects";
+import { Arc, Trips, Scatter , LabelInfo} from "./geoObjects";
 
 export interface WorkerMessage {
     type: SocketMsgTypes;
@@ -46,6 +46,14 @@ export const isArcMsg = (msg: WorkerMessage): msg is SocketMessage<Arc[]> => {
 export const isClearArcMsg = (msg: WorkerMessage): msg is SocketMessage<string> => {
     return msg.type === 'RECEIVED_CLEAR_ARCS'
 }
+
+export const isTripsMsg = (msg: WorkerMessage): msg is SocketMessage<Trips[]> => {
+    return msg.type === 'RECEIVED_TRIPS'
+}
+export const isClearTripsMsg = (msg: WorkerMessage): msg is SocketMessage<string> => {
+return msg.type === 'RECEIVED_CLEAR_TRIPS'
+}
+
 export const isScatterMsg = (msg: WorkerMessage): msg is SocketMessage<Scatter[]> => {
     return msg.type === 'RECEIVED_SCATTERS'
 }
@@ -72,6 +80,8 @@ export type SocketMsgTypes = 'RECEIVED_AGENT'| 'CONNECTED'| 'RECEIVED_MAPBOX_TOK
      | 'RECEIVED_VIEWSTATE'
      | 'RECEIVED_ARCS'
      | 'RECEIVED_CLEAR_ARCS'
+     | 'RECEIVED_TRIPS'
+     | 'RECEIVED_CLEAR_TRIPS'
      | 'RECEIVED_SCATTERS'
      | 'RECEIVED_CLEAR_SCATTERS'
      | 'RECEIVED_LABEL_INFO'

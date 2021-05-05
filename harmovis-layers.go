@@ -10,14 +10,17 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
+	ros "github.com/fukurin00/go_ros_msg"
 	"github.com/golang/protobuf/proto"
 	gosocketio "github.com/mtfelian/golang-socketio"
 	"github.com/mtfelian/golang-socketio/transport"
 	fleet "github.com/synerex/proto_fleet"
 	geo "github.com/synerex/proto_geography"
+	mqtt "github.com/synerex/proto_mqtt"
 	pagent "github.com/synerex/proto_people_agent"
 	api "github.com/synerex/synerex_api"
 	pbase "github.com/synerex/synerex_proto"
@@ -36,7 +39,15 @@ var (
 	ioserv          *gosocketio.Server
 	sxServerAddress string
 	mapboxToken     string
+	colormap        map[int][3]uint8
 )
+
+func init() {
+	colormap = make(map[int][3]uint8)
+	colormap[1] = [3]uint8{254, 0, 0}
+	colormap[2] = [3]uint8{0, 255, 0}
+	colormap[3] = [3]uint8{0, 0, 255}
+}
 
 func toJSON(m map[string]interface{}, utime int64) string {
 	s := fmt.Sprintf("{\"mtype\":%d,\"id\":%d,\"time\":%d,\"lat\":%f,\"lon\":%f,\"angle\":%f,\"speed\":%d}",
@@ -332,6 +343,17 @@ func supplyGeoCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 			mu.Unlock()
 		}
 
+	// case "Paths":
+	// 	cms := &geo.Paths{}
+	// 	err := proto.Unmarshal(sp.Cdata.Entity, cms)
+	// 	if err == nil {
+	// 		jsonBytes, _ := json.Marshal(cms)
+	// 		//			log.Printf("Arcs: %v", string(jsonBytes))
+	// 		mu.Lock()
+	// 		ioserv.BroadcastToAll("trips", string(jsonBytes))
+	// 		mu.Unlock()
+	// 	}
+
 	case "ClearArcs":
 		log.Printf("clearArc!")
 		mu.Lock()
@@ -455,6 +477,68 @@ func subscribePAgentSupply(client *sxutil.SXServiceClient) {
 	}
 }
 
+func subscribeMqttSupply(client *sxutil.SXServiceClient) {
+	for {
+		ctx := context.Background() //
+		err := client.SubscribeSupply(ctx, supplyMqttCallback)
+		log.Printf("Error:Supply %s\n", err.Error())
+		// we need to restart
+		reconnectClient(client)
+	}
+}
+
+const (
+	latBase = 35.181553  //
+	lonBase = 136.906128 //
+	xscale  = 9.109
+	yscale  = 11.094
+)
+
+type TripsOpt struct {
+	Path  [][2]float64
+	Ts    []int64
+	Color [3]uint8
+}
+
+func supplyMqttCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
+	//	log.Printf("Agent: %v", *sp)
+	var rcd *mqtt.MQTTRecord
+	err := proto.Unmarshal(sp.Cdata.Entity, rcd)
+	if err != nil {
+		log.Printf("Erooro: proto %s\n", err.Error())
+	} else {
+		seconds := sp.Ts.GetSeconds()
+		nanos := sp.Ts.GetNanos()
+		if strings.HasPrefix(rcd.Topic, "robot/path") {
+			var path *ros.Path
+			var id int
+			fmt.Sscanf(rcd.Topic, "robot/path/%d", &id)
+			err := json.Unmarshal(rcd.Record, path)
+			if err != nil {
+				log.Print(err)
+			}
+			var trip TripsOpt
+			for _, pos := range path.Poses {
+				lat := float64(latBase + 0.0001*(pos.Pose.Position.Y/yscale))
+				lon := float64(lonBase + 0.0001*(pos.Pose.Position.X/xscale))
+				ts := int64(pos.Header.Stamp.Secs)
+				trip.Path = append(trip.Path, [2]float64{lat, lon})
+				trip.Ts = append(trip.Ts, ts)
+			}
+			if val, ok := colormap[id]; ok {
+				trip.Color = val
+			} else {
+				trip.Color = [3]uint8{255, 255, 0}
+			}
+			jsonBytes, err := json.Marshal(trip)
+			jstr := fmt.Sprintf("{ \"ts\": %d.%03d, \"dt\": %s}", seconds, int(nanos/1000000), string(jsonBytes))
+			mu.Lock()
+			ioserv.BroadcastToAll("trips", jstr)
+			mu.Unlock()
+		}
+	}
+}
+
 /*
 func supplyPTCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 //	pt := sp.GetArg_PTService()
@@ -521,12 +605,17 @@ func main() {
 	argJSON3 := fmt.Sprintf("{Client:Map:Geo}")
 	geo_client := sxutil.NewSXServiceClient(client, pbase.GEOGRAPHIC_SVC, argJSON3)
 
+	argJSON4 := fmt.Sprintf("{Client:Map:MQTT}")
+	mqtt_client := sxutil.NewSXServiceClient(client, pbase.MQTT_GATEWAY_SVC, argJSON4)
+
 	wg.Add(1)
 	go subscribeRideSupply(rideClient)
 
 	go subscribePAgentSupply(pa_client)
 
 	go subscribeGeoSupply(geo_client)
+
+	go subscribeMqttSupply(mqtt_client)
 
 	go monitorStatus() // keep status
 

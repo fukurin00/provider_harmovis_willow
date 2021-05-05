@@ -2,7 +2,7 @@ import { isType } from 'typescript-fsa'
 import { Action } from 'redux'
 import * as actions from '../actions/actions'
 import { Line } from '../constants/line'
-import { Arc, Scatter} from '../constants/geoObjects'
+import { Arc, Trips,Scatter} from '../constants/geoObjects'
 
 export interface LineLayerState {
     lines: Line[]
@@ -29,6 +29,16 @@ export interface ArcLayerState {
 const initialArcState: ArcLayerState  = {
   arcs: [] ,
   arcVisible: true
+}
+
+export interface TripsLayerState {
+  trips: Trips[],
+  tripsVisible: boolean
+}
+
+const initialTripsState: TripsLayerState  = {
+  trips: [] ,
+  tripsVisible: true
 }
 
 export interface ScatterLayerState {
@@ -101,6 +111,25 @@ export const arcSettings = (state = initialArcState, action: Action): ArcLayerSt
     return {
       ...state,
       arcs: []
+    }
+  }
+  return state
+}
+
+export const tripsSettings = (state = initialTripsState, action: Action): TripsLayerState => {
+  if (isType(action, actions.addTripsData)) {
+    console.log("add Trips:"+action.payload.length)
+    let newtrips = state.trips.concat(action.payload)
+    console.log("result tips:"+newtrips.length)
+    return {
+      ...state,
+      trips: newtrips
+    }
+  }else if (isType(action, actions.clearTripsData)) {
+    console.log("clear Tripss")
+    return {
+      ...state,
+      trips: []
     }
   }
   return state

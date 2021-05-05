@@ -45,7 +45,7 @@ module.exports = {
 			test: /\.(js)$/,
 			loader: 'babel-loader',
 			include: [resolve(__dirname, './src')],
-			query: { 
+			options: { 
 				"presets": ["@babel/react"] 
 			}
 	    },

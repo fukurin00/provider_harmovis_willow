@@ -5,7 +5,7 @@ import { BarData } from '../constants/bargraph';
 import { AgentData } from '../constants/agent';
 import { Line } from '../constants/line';
 import { SocketMessage } from '../constants/workerMessageTypes';
-import { Arc, Scatter, LabelInfo} from '../constants/geoObjects';
+import { Arc, Trips, Scatter, LabelInfo} from '../constants/geoObjects';
 const socket = io();
 
 var wcounter = 0
@@ -228,6 +228,28 @@ function startRecivedData() {
     socket.on('clearArcs', (payload: string) =>{
         worker.postMessage({
             type: 'RECEIVED_CLEAR_ARCS',
+            payload
+        } as SocketMessage<string> );
+    })
+
+    socket.on('trips', (payload: string) =>{
+        console.log("Receive Trips!:"+payload)
+        const data = JSON.parse(payload)
+        var trips: Trips[] =[]
+
+        for (var i = 0; i < data.path.length; i++){
+            trips.push(data)
+        }
+
+        worker.postMessage({
+            type: 'RECEIVED_TRIPS',
+            payload: trips
+        } as SocketMessage<Trips[]> );
+    })
+
+    socket.on('clearTrips', (payload: string) =>{
+        worker.postMessage({
+            type: 'RECEIVED_CLEAR_TRIPS',
             payload
         } as SocketMessage<string> );
     })

@@ -40,7 +40,9 @@ declare module "@deck.gl/layers" {
 
   class LineLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
 
-  class ArcLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
+  class ArcLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> { }
+  
+  class TripsLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
 
   class PathLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
 

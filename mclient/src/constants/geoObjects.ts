@@ -7,6 +7,14 @@ export interface Arc  {
     tilt?: number
 }
 
+interface Point{
+    point: number[]
+}
+export interface Trips{
+    path: Point[],
+    ts: number[],
+    color: number[],
+}
 export interface Scatter  {
     pos: number[],
     radius: number,
