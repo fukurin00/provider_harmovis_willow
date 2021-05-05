@@ -41,7 +41,22 @@ import HeatmapLayer from './HeatmapLayer'
 
 import { ScenegraphLayer } from '@deck.gl/mesh-layers';
 import {registerLoaders} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import { GLTFLoader } from '@loaders.gl/gltf';
+
+import { CubeGeometry } from '@luma.gl/engine'
+
+const CUBE_POSITIONS = new Float32Array([
+	-1,-1,2,1,-1,2,1,1,2,-1,1,2,
+	-1,-1,-2,-1,1,-2,1,1,-2,1,-1,-2,
+	-1,1,-2,-1,1,2,1,1,2,1,1,-2,
+	-1,-1,-2,1,-1,-2,1,-1,2,-1,-1,2,
+	1,-1,-2,1,1,-2,1,1,2,1,-1,2,
+	-1,-1,-2,-1,-1,2,-1,1,2,-1,1,-2
+	]);
+const ATTRIBUTES = {
+	POSITION: {size: 3, value: new Float32Array(CUBE_POSITIONS)},
+};
+const iconmesh = new CubeGeometry({attributes: ATTRIBUTES});
 
 registerLoaders([GLTFLoader]);
 
@@ -71,35 +86,36 @@ class App extends Container<any,any> {
 				self.getBearing(msg.payload)
 			} else if (isClearMovesMsg(msg)) {
 				self.deleteMovebase(0)
-//			 	self.getAgents(msg.payload)
-			} else if(isMapboxToken(msg)) {
+				//			 	self.getAgents(msg.payload)
+			} else if (isMapboxToken(msg)) {
 				this.setState({
 					mapbox_token: msg.payload
 				});
-				console.log("Mapbox Token Assigned:"+msg.payload)
+				console.log("Mapbox Token Assigned:" + msg.payload)
 			} else if (msg.type === 'CONNECTED') {
 				console.log('connected')
 			} else if (isViewStateMsg(msg)) {
 				self.getViewState(msg.payload)
-			} else if (isArcMsg(msg)){
+			} else if (isArcMsg(msg)) {
 				self.addArc(msg.payload)
-			} else if (isClearArcMsg(msg)){
+			} else if (isClearArcMsg(msg)) {
 				self.clearArc()
-			} else if (isTripsMsg(msg)){
+			} else if (isTripsMsg(msg)) {
 				self.addTrips(msg.payload)
-			} else if (isClearTripsMsg(msg)){
+			} else if (isClearTripsMsg(msg)) {
 				self.clearTrips()
-			} else if (isScatterMsg(msg)){
-				self.addScatter(msg.payload)								
-			} else if (isClearScatterMsg(msg)){
+			} else if (isScatterMsg(msg)) {
+				self.addScatter(msg.payload)
+			} else if (isClearScatterMsg(msg)) {
 				self.clearScatter()
-			} else if (isLabelInfoMsg(msg)){
+			} else if (isLabelInfoMsg(msg)) {
 				console.log("LabelText")
 				store.dispatch(actions.setTopLabelInfo(msg.payload))
-			} else if (isHarmoVISConfMsg(msg)){
+			} else if (isHarmoVISConfMsg(msg)) {
 				self.resolveHarmoVISConf(msg.payload)
+			} else if (msg.type === 'RECEIVED_EVENT') {
+				self.getEvent(msg.payload)
 			}
-
 		}
 
 		setSecPerHour(3600)
@@ -676,6 +692,7 @@ class App extends Container<any,any> {
 		this.setState({viewState})
 	}*/
 	
+		
 	componentDidMount(){
 		super.componentDidMount();
 		// make zoom level 20!
@@ -870,6 +887,10 @@ class App extends Container<any,any> {
 					layerRadiusScale: 0.03,
 					layerOpacity: 0.8,
 					getRouteWidth: () => 0.2,
+					iconDesignations:[
+						{type:'agents', layer:'Scatterplot', getColor:()=>[0,255,0,255]},
+						{type:'event', layer:'SimpleMesh', getColor:()=>[255,255,0,255], mesh:iconmesh, sizeScale: 0.2},
+					],
 //					getStrokeWidth: 0.1,
 //					getColor : [0,200,20] as number[],
 					getArchWidth: (x : any) => 0.2, 

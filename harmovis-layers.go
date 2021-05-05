@@ -40,6 +40,7 @@ var (
 	sxServerAddress string
 	mapboxToken     string
 	colormap        map[int][3]uint8
+	eventTimestamp  time.Time
 )
 
 func init() {
@@ -180,17 +181,25 @@ func run_server() *gosocketio.Server {
 }
 
 type MapMarker struct {
-	mtype int32   `json:"mtype"`
-	id    int32   `json:"id"`
-	lat   float32 `json:"lat"`
-	lon   float32 `json:"lon"`
-	angle float32 `json:"angle"`
-	speed int32   `json:"speed"`
+	mtype  int32   `json:"mtype"`
+	id     int32   `json:"id"`
+	lat    float32 `json:"lat"`
+	lon    float32 `json:"lon"`
+	angle  float32 `json:"angle"`
+	speed  int32   `json:"speed"`
+	ts     int64   `json:"ts"`
+	tsnano int64   `json:"tsnano"`
 }
 
 func (m *MapMarker) GetJson() string {
 	s := fmt.Sprintf("{\"mtype\":%d,\"id\":%d,\"lat\":%f,\"lon\":%f,\"angle\":%f,\"speed\":%d}",
 		m.mtype, m.id, m.lat, m.lon, m.angle, m.speed)
+	return s
+}
+
+func (m *MapMarker) GetJsonTime() string {
+	s := fmt.Sprintf("{\"mtype\":%d,\"id\":%d,\"lat\":%f,\"lon\":%f,\"angle\":%f,\"speed\":%d,\"ts\":%s}",
+		m.mtype, m.id, m.lat, m.lon, m.angle, m.speed, time.Unix(m.ts, m.tsnano).Format(time.RFC3339))
 	return s
 }
 
@@ -502,7 +511,7 @@ type TripsOpt struct {
 
 func supplyMqttCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 	//	log.Printf("Agent: %v", *sp)
-	var rcd *mqtt.MQTTRecord
+	var rcd = &mqtt.MQTTRecord{}
 	err := proto.Unmarshal(sp.Cdata.Entity, rcd)
 	if err != nil {
 		log.Printf("Erooro: proto %s\n", err.Error())
@@ -535,6 +544,42 @@ func supplyMqttCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 			mu.Lock()
 			ioserv.BroadcastToAll("trips", jstr)
 			mu.Unlock()
+		} else if strings.HasPrefix(rcd.Topic, "robot/position") {
+			var id int
+			n, nerr := fmt.Sscanf(rcd.Topic, "robot/position/%d", &id)
+			if n == 1 && nerr == nil { // robot pose into location
+				var pose ros.PoseStamped
+				jerr := json.Unmarshal(rcd.Record, &pose)
+				var angle float32
+
+				angle = float32(pose.Pose.Orientation.W)
+
+				if jerr == nil {
+					var lat, lon float32
+					lat = float32(latBase + 0.0001*(pose.Pose.Position.Y/yscale))
+					lon = float32(lonBase + 0.0001*(pose.Pose.Position.X/xscale))
+
+					mm := &MapMarker{
+						mtype:  int32(0),
+						id:     int32(id),
+						lat:    lat,
+						lon:    lon,
+						angle:  angle,
+						speed:  1,
+						ts:     seconds,
+						tsnano: int64(nanos),
+					}
+					if time.Since(eventTimestamp).Seconds() > 0.1 {
+						log.Printf("Map:%s", mm.GetJsonTime())
+						mu.Lock()
+						ioserv.BroadcastToAll("event", mm.GetJson())
+						mu.Unlock()
+						eventTimestamp = time.Now()
+					}
+				}
+			} else {
+				log.Printf("Unmarshal MQTT robot record error! %v %v", err, rcd)
+			}
 		}
 	}
 }
