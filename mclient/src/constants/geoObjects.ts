@@ -11,7 +11,7 @@ interface Point{
     point: number[]
 }
 export interface Trips{
-    path: Point[],
+    path: any[],
     ts: number[],
     color: number[],
 }

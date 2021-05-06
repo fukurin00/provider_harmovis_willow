@@ -116,9 +116,9 @@ export const arcSettings = (state = initialArcState, action: Action): ArcLayerSt
   return state
 }
 
-export const tripsSettings = (state = initialTripsState, action: Action): TripsLayerState => {
+export const tripsSettings = (state =initialTripsState, action: Action): TripsLayerState => {
   if (isType(action, actions.addTripsData)) {
-    console.log("add Trips:"+action.payload.length)
+    console.log("add Trips:"+action.payload)
     let newtrips = state.trips.concat(action.payload)
     console.log("result tips:"+newtrips.length)
     return {

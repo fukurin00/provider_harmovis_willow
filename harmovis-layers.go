@@ -504,9 +504,9 @@ const (
 )
 
 type TripsOpt struct {
-	Path  [][2]float64
-	Ts    []int64
-	Color [3]uint8
+	Path  [][2]float64 `json:"path"`
+	Ts    []int64      `json:"ts"`
+	Color [3]uint8     `json:"color"`
 }
 
 func supplyMqttCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
@@ -519,10 +519,10 @@ func supplyMqttCallback(clt *sxutil.SXServiceClient, sp *api.Supply) {
 		seconds := sp.Ts.GetSeconds()
 		nanos := sp.Ts.GetNanos()
 		if strings.HasPrefix(rcd.Topic, "robot/path") {
-			var path *ros.Path
+			var path ros.Path
 			var id int
 			fmt.Sscanf(rcd.Topic, "robot/path/%d", &id)
-			err := json.Unmarshal(rcd.Record, path)
+			err := json.Unmarshal(rcd.Record, &path)
 			if err != nil {
 				log.Print(err)
 			}

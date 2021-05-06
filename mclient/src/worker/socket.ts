@@ -245,9 +245,10 @@ function startRecivedData() {
         const data = JSON.parse(payload)
         var trips: Trips[] =[]
 
-        for (var i = 0; i < data.path.length; i++){
-            trips.push(data)
-        }
+        // for (var i = 0; i < data.path.length; i++){
+        //     trips.push(data)
+        // }
+        trips.push(data)
 
         worker.postMessage({
             type: 'RECEIVED_TRIPS',

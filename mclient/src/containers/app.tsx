@@ -439,7 +439,7 @@ class App extends Container<any,any> {
 	}
 
 	addTrips (data : Trips[]){
-		console.log('getTrips!:' + data.length)
+		// console.log('getTrips!:' + data.length)
 		console.log(this.props)
 		console.log(this.state)
 
@@ -844,12 +844,13 @@ class App extends Container<any,any> {
 				new TripsLayer({
 					id: 'trips-layer',
 					visible: tripsVisible,
-					data: trips,
+					data: trips[-1],
 					getPath: (d: any) => d.path,
 					getTimestamps: (d: any) => d.ts,
-					getColor: trips.color,
-					currentTime: trips.ts[0],
-					trailLength: trips.ts[-1]
+					//getColor: (d: any) =>d.color,
+					//getColor: [255,0,0],
+					currentTime: trips[-1].ts[0],
+					trailLength: trips[-1].ts[-1]
 				})
 			)
 		}
